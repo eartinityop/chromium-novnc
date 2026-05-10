@@ -1,11 +1,13 @@
 server {
     listen ${PORT};
 
+    # Serve noVNC web files
     location / {
         root /opt/novnc;
         index vnc.html;
     }
 
+    # Proxy WebSocket traffic to websockify (port 5901)
     location /websockify {
         proxy_pass http://localhost:5901;
         proxy_http_version 1.1;
