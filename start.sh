@@ -1,23 +1,21 @@
 #!/bin/bash
+# Render se PORT variable le, local test ke liye 8080
+export PORT="${PORT:-8080}"
 
-# Render PORT environment variable ko pakdo (default 8080 for local testing)
-PORT=${PORT:-8080}
+# Nginx config mein port inject karo
+envsubst '$PORT' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf
 
-# Virtual display start karo (screen :0, 1280x720)
-Xvfb :0 -screen 0 1280x720x16 &
+# Xvnc: X server + VNC + WebSocket (:0 pe, websocket 5901)
+Xvnc :0 -geometry 1280x720 -depth 24 -SecurityTypes None -websocket 5901 &
+sleep 2
+
+# Optional window manager for better Chrome UI
+openbox --replace &
 sleep 1
 
-# VNC server start karo on display :0
-x11vnc -display :0 -forever -nopw -quiet &
-sleep 1
+# Chromium launch
+export DISPLAY=:0
+chromium-browser $CHROMIUM_FLAGS &
 
-# noVNC ke through websockify – ye VNC ko WebSocket se bridge karega
-# aur noVNC client bhi serve karega
-websockify --web /usr/share/novnc $PORT localhost:5900 &
-
-# Browser launch karo (Chromium)
-chromium-browser --display=:0 $CHROMIUM_FLAGS &
-# Firefox ke liye: firefox --display=:0 --kiosk https://example.com &
-
-# Script ko alive rakhne ke liye wait karo
-wait
+# Nginx foreground
+nginx -g "daemon off;"
