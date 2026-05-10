@@ -1,21 +1,29 @@
 #!/bin/bash
-# Render se PORT variable le, local test ke liye 8080
+# Render ka PORT pakdo, local test ke liye 8080
 export PORT="${PORT:-8080}"
 
-# Nginx config mein port inject karo
+# Nginx config mein PORT inject karo
 envsubst '$PORT' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf
 
-# Xvnc: X server + VNC + WebSocket (:0 pe, websocket 5901)
-Xvnc :0 -geometry 1280x720 -depth 24 -SecurityTypes None -websocket 5901 &
-sleep 2
+# Virtual framebuffer (X server) start karo
+Xvfb :0 -screen 0 1280x720x24 &
+sleep 1
 
-# Optional window manager for better Chrome UI
+# Openbox window manager (UI behtar dikhega)
 openbox --replace &
 sleep 1
 
-# Chromium launch
-export DISPLAY=:0
-chromium-browser $CHROMIUM_FLAGS &
+# x11vnc (VNC server) – :0 display, port 5900 pe
+x11vnc -display :0 -forever -nopw -quiet &
+sleep 1
 
-# Nginx foreground
+# websockify – bridge from WS port 5901 to VNC port 5900
+websockify 5901 localhost:5900 &
+sleep 1
+
+# Google Chrome launch (DISPLAY=:0)
+export DISPLAY=:0
+google-chrome-stable $CHROME_FLAGS https://example.com &
+
+# Nginx foreground (isse container alive rahega)
 nginx -g "daemon off;"
