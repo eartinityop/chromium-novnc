@@ -1,25 +1,33 @@
 FROM ubuntu:22.04
 
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+    NOVNC_VERSION=1.4.0
 
-# Dependencies + Xvfb + VNC + noVNC + websockify + browser
+# System packages: Xvnc (TigerVNC), nginx, openbox, browser
 RUN apt-get update && apt-get install -y \
-    xvfb \
-    x11vnc \
-    novnc \
-    websockify \
+    tigervnc-standalone-server \
+    nginx \
+    openbox \
     chromium-browser \
-    # Firefox ke liye ye line use kar (chromium ki jagah):
-    # firefox \
+    wget \
+    ca-certificates \
+    gettext-base \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# noVNC default port Render set karega
-EXPOSE 8080
+# Download & extract noVNC web client
+RUN wget -q "https://github.com/novnc/noVNC/archive/refs/tags/v${NOVNC_VERSION}.tar.gz" -O /tmp/novnc.tar.gz \
+    && tar -xzf /tmp/novnc.tar.gz -C /opt/ \
+    && mv /opt/noVNC-${NOVNC_VERSION} /opt/novnc \
+    && rm /tmp/novnc.tar.gz
 
+# Nginx config template
+COPY default.conf.template /etc/nginx/conf.d/default.conf.template
+
+# Start script
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
-# Chromium ko non-root chalane ke liye --no-sandbox dena hoga
-ENV CHROMIUM_FLAGS="--no-sandbox --disable-gpu --start-maximized https://example.com"
+# Chromium flags (non-root)
+ENV CHROMIUM_FLAGS="--no-sandbox --disable-gpu --disable-features=RendererCodeIntegrity --start-maximized"
 
 ENTRYPOINT ["/start.sh"]
